@@ -1,6 +1,7 @@
 from django.http.response import HttpResponse
 from django.http import JsonResponse
 import uuid
+import pickle
 
 Waiting_Games = {}
 Playing_Games = {}
@@ -55,6 +56,9 @@ def getGameList(request):
     global Waiting_Games
     response_data = {}
     #test_map(request)                                 #initialisation to be removed later
+    if bool(Waiting_Games):
+        with open('waiting_games.pkl', 'rb') as input:
+            Waiting_Games = pickle.load(input)
     for game in Waiting_Games:
         response_data[Waiting_Games[game].game_id] = str(Waiting_Games[game].game_name) + "$" + str(Waiting_Games[game].end_index) 
     return JsonResponse(response_data)
@@ -62,6 +66,12 @@ def getGameList(request):
 def getGameState(request):
     global Playing_Games
     global Waiting_Games
+    if bool(Waiting_Games):
+        with open('waiting_games.pkl', 'rb') as input:
+            Waiting_Games = pickle.load(input)
+    if bool(Playing_Games):
+        with open('playing_games.pkl', 'rb') as input:
+            Playing_Games = pickle.load(input)
     #xyz = Waiting_Games
     #test_map(request)                                #initialisation function to be removed later
     game_str = request.GET["game_id"]
@@ -84,7 +94,9 @@ def createGame(request):
     game_id = str(uuid.uuid4().int) #use uuid
     game = GameState(game_id,game_name,p_id,'',stack,1,total_coins,0,0,1,2,1)
     Waiting_Games[game_id] = game
-    response_data = gameDictionary(Waiting_Games[game_id])
+    with open('waiting_games.pkl', 'wb') as output:
+        pickle.dump(Waiting_Games, output, pickle.HIGHEST_PROTOCOL)
+    response_data = gameDictionary(game)
     return JsonResponse(response_data)
 
 def makeTurn(request):
@@ -95,6 +107,9 @@ def makeTurn(request):
     p_id = request.GET["p_id"]
     #turn = request.GET["turn"]
     coins_picked = int(request.GET["coins_picked"])
+    if bool(Playing_Games):
+        with open('playing_games.pkl', 'rb') as input:
+            Playing_Games = pickle.load(input)
     start = Playing_Games[game_id].start_index
     if p_id == Playing_Games[game_id].p1_id:
         Playing_Games[game_id].turn = 2
@@ -112,14 +127,22 @@ def makeTurn(request):
             #print(str(Playing_Games[game_id].p2_score))
     Playing_Games[game_id].max_coins = 2*coins_picked
     Playing_Games[game_id].start_index += coins_picked
-    if str(Playing_Games[game_id].start_index) == str(Playing_Games[game_id].end_index + 1):
+    if Playing_Games[game_id].start_index == Playing_Games[game_id].end_index + 1:
         Playing_Games[game_id].status = 0
     response_data = gameDictionary(Playing_Games[game_id])
+    with open('playing_games.pkl', 'wb') as output:
+        pickle.dump(Playing_Games, output, pickle.HIGHEST_PROTOCOL)
     return JsonResponse(response_data)
 
 def joinGame(request):
     global Waiting_Games
     global Playing_Games
+    if bool(Waiting_Games):
+        with open('waiting_games.pkl', 'rb') as input:
+            Waiting_Games = pickle.load(input)
+    if bool(Playing_Games):
+        with open('playing_games.pkl', 'rb') as input:
+            Playing_Games = pickle.load(input)
     #test_map(request)         #intialisation to be removed later
     game = request.GET["game_id"]
     p2_id = request.GET["p2_id"]
@@ -128,12 +151,21 @@ def joinGame(request):
     Playing_Games[game] = Waiting_Games[game]
     del Waiting_Games[game]
     response_data = gameDictionary(Playing_Games[game])
+    with open('waiting_games.pkl', 'wb') as output:
+        pickle.dump(Waiting_Games, output, pickle.HIGHEST_PROTOCOL)
+    with open('playing_games.pkl', 'wb') as output:
+        pickle.dump(Playing_Games, output, pickle.HIGHEST_PROTOCOL)
     return JsonResponse(response_data)
 
 def dropGame(request):
     global Waiting_Games
     game = request.GET["game_id"]
+    if bool(Waiting_Games):
+        with open('waiting_games.pkl', 'rb') as input:
+            Waiting_Games = pickle.load(input)
     del Waiting_Games[game]
+    with open('waiting_games.pkl', 'wb') as output:
+        pickle.dump(Waiting_Games, output, pickle.HIGHEST_PROTOCOL)
     return HttpResponse("Deleted!")
 
 def test_map(request):                                #initialisation function to be removed later     
