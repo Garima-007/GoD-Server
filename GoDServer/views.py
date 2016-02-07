@@ -1,5 +1,6 @@
 from django.http.response import HttpResponse
 from django.http import JsonResponse
+import uuid
 
 Waiting_Games = {}
 Playing_Games = {}
@@ -53,17 +54,25 @@ def gameDictionary(game):
 def getGameList(request):
     global Waiting_Games
     response_data = {}
-    test_map(request)                                 #initialisation to be removed later
+    #test_map(request)                                 #initialisation to be removed later
     for game in Waiting_Games:
-        response_data[Waiting_Games[game].game_id] = Waiting_Games[game].game_name
+        response_data[Waiting_Games[game].game_id] = str(Waiting_Games[game].game_name) + "$" + str(Waiting_Games[game].end_index) 
     return JsonResponse(response_data)
 
 def getGameState(request):
     global Playing_Games
-    test_map(request)                                #initialisation function to be removed later
+    global Waiting_Games
+    #xyz = Waiting_Games
+    #test_map(request)                                #initialisation function to be removed later
     game_str = request.GET["game_id"]
-    game = int(game_str)
-    response_data = gameDictionary(Playing_Games[game])
+    #game = int(game_str)
+    if game_str in Playing_Games:
+        response_data = gameDictionary(Playing_Games[game_str])
+    else:
+        #print(str(game))
+    #print("#######################################")
+    #print("%%%%%%%" + str(xyz[game_str]))
+        response_data = gameDictionary(Waiting_Games[game_str])
     return JsonResponse(response_data)
  
 def createGame(request):
@@ -71,18 +80,18 @@ def createGame(request):
     p_id = request.GET["p_id"]
     stack = request.GET["stack"]
     game_name = request.GET["game_name"]
-    total_coins = request.GET["total_coins"]
-    game_id = 789 #use uuid
+    total_coins = int(request.GET["total_coins"])
+    game_id = str(uuid.uuid4().int) #use uuid
     game = GameState(game_id,game_name,p_id,'',stack,1,total_coins,0,0,1,2,1)
     Waiting_Games[game_id] = game
     response_data = gameDictionary(Waiting_Games[game_id])
     return JsonResponse(response_data)
 
 def makeTurn(request):
-    test_map(request)        #initialisation remove later
+    #test_map(request)        #initialisation remove later
     global Playing_Games
-    game = request.GET["game_id"]
-    game_id = int(game)
+    game_id = request.GET["game_id"]
+    #game_id = int(game)
     p_id = request.GET["p_id"]
     #turn = request.GET["turn"]
     coins_picked = int(request.GET["coins_picked"])
@@ -93,14 +102,14 @@ def makeTurn(request):
         while i < coins_picked:
             Playing_Games[game_id].p1_score += Playing_Games[game_id].coin_stack[start+i-1]
             i += 1
-            print(str(Playing_Games[game_id].p1_score))
+            #print(str(Playing_Games[game_id].p1_score))
     else:
          Playing_Games[game_id].turn = 1
          i = 0
          while i < coins_picked:
             Playing_Games[game_id].p2_score += Playing_Games[game_id].coin_stack[start+i-1]
             i += 1
-            print(str(Playing_Games[game_id].p2_score))
+            #print(str(Playing_Games[game_id].p2_score))
     Playing_Games[game_id].max_coins = 2*coins_picked
     Playing_Games[game_id].start_index += coins_picked
     if Playing_Games[game_id].start_index == Playing_Games[game_id].end_index + 1:
@@ -111,8 +120,8 @@ def makeTurn(request):
 def joinGame(request):
     global Waiting_Games
     global Playing_Games
-    test_map(request)
-    game = int(request.GET["game_id"])
+    #test_map(request)         #intialisation to be removed later
+    game = request.GET["game_id"]
     p2_id = request.GET["p2_id"]
     Waiting_Games[game].p2_id = Waiting_Games[game].p2_id + p2_id
     Waiting_Games[game].status = 2
@@ -123,18 +132,18 @@ def joinGame(request):
 
 def dropGame(request):
     global Waiting_Games
-    game = int(request.GET["game_id"])
+    game = request.GET["game_id"]
     del Waiting_Games[game]
     return HttpResponse("Deleted!")
 
 def test_map(request):                                #initialisation function to be removed later     
     global Waiting_Games
     global Playing_Games
-    Waiting_Games[123] = GameState(123,'abc','1','','25,75',1,2,25,50,1,2,1)
-    Waiting_Games[234] = GameState(234,'defXX','1','','25,75',1,2,25,50,1,2,1)
-    Playing_Games[1] = GameState(1,'abc','1','2','25,75',1,2,0,0,1,2,2) 
+    Waiting_Games[123] = GameState('123','abc','1','','25,75',1,2,25,50,1,2,1)
+    Waiting_Games[234] = GameState('234','defXX','1','','25,75',1,2,25,50,1,2,1)
+    Playing_Games[1] = GameState('1','abc','1','2','25,75',1,2,0,0,1,2,2) 
     #return ""
-    #return HttpResponse(str(Waiting_Games[123]) + "$$ " + str(Waiting_Games[234]))
+    #return HttpResponse(str(Waiting_Games['123']) + "$$ " + str(Waiting_Games['234']))
 
 def test(request):
-    return HttpResponse(request.GET["name"]+str(GameState(123,'frw','1','2','25,75',1,2,25,50,1,4,2)))
+    return HttpResponse(request.GET["name"]+str(GameState('123','frw','1','2','25,75',1,2,25,50,1,4,2)))
